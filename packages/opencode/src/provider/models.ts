@@ -70,7 +70,7 @@ export namespace ModelsDev {
 
   export async function get() {
     refresh()
-    
+
     // Only return Altare Arc provider (free)
     const providers: Record<string, Provider> = {
       altare: {

@@ -621,7 +621,15 @@ export namespace Provider {
 
     const provider = await state().then((state) => state.providers[providerID])
     if (!provider) return
-    let priority = ["arc-4-mini", "claude-haiku-4-5", "claude-haiku-4.5", "3-5-haiku", "3.5-haiku", "gemini-2.5-flash", "gpt-5-nano"]
+    let priority = [
+      "arc-4-mini",
+      "claude-haiku-4-5",
+      "claude-haiku-4.5",
+      "3-5-haiku",
+      "3.5-haiku",
+      "gemini-2.5-flash",
+      "gpt-5-nano",
+    ]
     // claude-haiku-4.5 is considered a premium model in github copilot, we shouldn't use premium requests for title gen
     if (providerID === "github-copilot") {
       priority = priority.filter((m) => m !== "claude-haiku-4.5")
