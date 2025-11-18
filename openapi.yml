@@ -1,0 +1,595 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "Altare Arc Chat Completion API",
+    "description": "API for creating chat completions using Arc, a large language model by Altare Technologies.",
+    "contact": {
+      "email": "support@altr.cc",
+      "name": "Altare Technologies",
+      "url": "https://console.altr.cc"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://console.altr.cc/api/arc",
+      "description": "Production server"
+    },
+    {
+      "url": "http://localhost:8787/api/arc",
+      "description": "Development server"
+    }
+  ],
+  "paths": {
+    "/chat/completions": {
+      "post": {
+        "summary": "Create Chat Completion",
+        "tags": [
+          "Chat"
+        ],
+        "description": "Create a chat completion using Arc, a large language model by Altare Technologies. The system prompt \"You are Arc, a large language model by Altare Technologies.\" is automatically prepended to all requests. When `stream: true` is set in the request, the response is returned as Server-Sent Events (SSE) with `Content-Type: text/event-stream`. Each event follows the SSE format: `data: {json}\n\n`.",
+        "operationId": "create-chat-completion",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat-completion-request-payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat-completion-response-payload"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat-completion-streaming-response-payload"
+                },
+                "description": "Server-Sent Events (SSE) stream. Each event is formatted as `data: {json}\n\n`. The stream ends with `data: [DONE]\n\n`."
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error-response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error-response"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "chat-completion-request-payload": {
+        "title": "Chat Completion Request Payload",
+        "type": "object",
+        "description": "Chat Completion Request Payload",
+        "required": [
+          "model",
+          "messages"
+        ],
+        "properties": {
+          "model": {
+            "type": "string",
+            "enum": [
+              "arc-4-max-2511",
+              "arc-4-2511",
+              "arc-4-mini-2511"
+            ],
+            "description": "The model to use for chat completion. Available models: arc-4-max-2511 (largest), arc-4-2511 (standard), arc-4-mini-2511 (compact)."
+          },
+          "messages": {
+            "type": "array",
+            "description": "The message context to use for the chat completion request, separated by system, user, and assistant roles. A system prompt identifying Arc will be automatically prepended.",
+            "items": {
+              "$ref": "#/components/schemas/chat-completion-req-message"
+            }
+          },
+          "stream": {
+            "type": "boolean",
+            "description": "Indicates whether the response should be streamed. When `true`, the response is returned as Server-Sent Events (SSE) with `Content-Type: text/event-stream`.",
+            "default": false
+          },
+          "max_tokens": {
+            "type": "integer",
+            "default": 512,
+            "description": "The maximum number of tokens to generate for the chat completion."
+          },
+          "n": {
+            "type": "integer",
+            "default": 1,
+            "description": "The number of chat completion choices to generate for each input message."
+          },
+          "seed": {
+            "type": "integer",
+            "description": "If you would like a different response from the same message, changing the seed will change the response. A null value generates a random seed."
+          },
+          "temperature": {
+            "type": "number",
+            "format": "float",
+            "default": 1,
+            "minimum": 0,
+            "maximum": 2,
+            "description": "A value between 0.0 and 2.0 that controls the randomness of the model's output. When set closer to 1, such as 0.8, the outcome is more unpredictable and creative. Values nearing 0, like 0.2, produce more predictable and less creative results. Setting temperature to zero is equivalent to setting a seed, enabling deterministic testing."
+          },
+          "top_p": {
+            "type": "number",
+            "format": "float",
+            "default": 1,
+            "minimum": 0,
+            "maximum": 1,
+            "description": "A value between 0.0 and 1.0 that controls the probability of the model generating a particular token. A higher value will result in more diverse outputs, while a lower value will result in more repetitive outputs."
+          },
+          "frequency_penalty": {
+            "type": "number",
+            "format": "float",
+            "default": 0,
+            "minimum": -2,
+            "maximum": 2,
+            "description": "A value between -2.0 and 2.0 that controls how much the model penalizes generating repetitive responses."
+          },
+          "presence_penalty": {
+            "type": "number",
+            "format": "float",
+            "default": 0,
+            "minimum": -2,
+            "maximum": 2,
+            "description": "A value between -2.0 and 2.0 that controls how much the model penalizes generating responses that contain certain words or phrases."
+          },
+          "stop": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A list of strings that the model will stop generating text if it encounters any of them."
+          },
+          "logprobs": {
+            "type": "boolean",
+            "description": "Whether to return log probabilities of the output tokens or not. If true, returns the log probabilities of each output token returned in the content of message."
+          },
+          "top_logprobs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20,
+            "description": "An integer between 0 and 20 specifying the number of most likely tokens to return at each token position, each with an associated log probability. `logprobs` must be set to true if this parameter is used."
+          },
+          "tool_choice": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "auto",
+                  "required"
+                ],
+                "description": "Specify which (if any) tool is called by the model. `none` means the model will not call any tool and instead generates a message. `auto` means the model can pick between generating a message or calling one or more tools. `required` means the model must call one or more tools."
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "Allowed tool configuration type. Always `allowed_tools`."
+                  },
+                  "mode": {
+                    "type": "string",
+                    "description": "Constrains the tools available to the model to a pre-defined set. `auto` allows the model to pick from among the allowed tools and generate a message. `required` requires the model to call one or more of the allowed tools."
+                  },
+                  "tools": {
+                    "type": "array",
+                    "description": "A list of tool definitions that the model should be allowed to call.",
+                    "items": {
+                      "$ref": "#/components/schemas/function-tool-choice"
+                    }
+                  }
+                }
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/function-tool-choice"
+                }
+              }
+            ]
+          },
+          "tools": {
+            "type": "array",
+            "description": "A list of function tools the model may call.",
+            "items": {
+              "$ref": "#/components/schemas/function-tool"
+            }
+          }
+        }
+      },
+      "chat-completion-req-message": {
+        "title": "Chat Completion Request Message",
+        "type": "object",
+        "description": "An object containing the role and content for a chat completion request message.",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "system",
+              "assistant",
+              "user"
+            ],
+            "description": "The role of the author of this message."
+          },
+          "content": {
+            "type": "string",
+            "description": "The contents of the message."
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ]
+      },
+      "chat-completion-response-payload": {
+        "title": "Chat Completion Response Payload",
+        "type": "object",
+        "description": "Chat Completion Response Payload",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "A unique identifier for the chat completion."
+          },
+          "created": {
+            "type": "integer",
+            "description": "The Unix timestamp (in seconds) of when the chat completion was created."
+          },
+          "model": {
+            "type": "string",
+            "description": "The model that was inferred for chat completion (returns the Altare model name)."
+          },
+          "choices": {
+            "type": "array",
+            "description": "The resulting assistant message(s) for the chat completion.",
+            "items": {
+              "$ref": "#/components/schemas/chat-completion-choice"
+            }
+          },
+          "usage": {
+            "$ref": "#/components/schemas/chat-completion-usage"
+          }
+        }
+      },
+      "chat-completion-streaming-response-payload": {
+        "title": "Chat Completion Streaming Response Payload",
+        "type": "object",
+        "description": "Chat Completion Streaming Response Payload. When streaming is enabled, responses are sent as Server-Sent Events (SSE) with each event formatted as `data: {json}\n\n`. The response content type is `text/event-stream`.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "A unique identifier for the chat completion."
+          },
+          "object": {
+            "type": "string",
+            "description": "The object type, which is always `chat.completion.chunk`."
+          },
+          "created": {
+            "type": "integer",
+            "description": "The Unix timestamp (in seconds) of when the chat completion was created."
+          },
+          "model": {
+            "type": "string",
+            "description": "The model that was inferred for chat completion (returns the Altare model name)."
+          },
+          "choices": {
+            "type": "array",
+            "description": "The resulting assistant message(s) for the chat completion.",
+            "items": {
+              "$ref": "#/components/schemas/chat-completion-streaming-choice"
+            }
+          }
+        }
+      },
+      "chat-completion-choice": {
+        "title": "Chat Completion Choice",
+        "type": "object",
+        "description": "Chat Completion Choice",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "description": "The index of the choice in the list of choices."
+          },
+          "message": {
+            "$ref": "#/components/schemas/chat-completion-message"
+          },
+          "logprobs": {
+            "$ref": "#/components/schemas/chat-completion-logprobs"
+          },
+          "finish_reason": {
+            "type": "string",
+            "description": "The reason the model stopped generating tokens. This will be 'stop' if the model hit a natural stop point or a provided stop sequence or 'length' if the maximum number of tokens specified in the request was reached."
+          }
+        }
+      },
+      "chat-completion-streaming-choice": {
+        "title": "Chat Completion Streaming Choice",
+        "type": "object",
+        "description": "Chat Completion Streaming Choice",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "description": "The index of the choice in the list of choices."
+          },
+          "delta": {
+            "$ref": "#/components/schemas/chat-completion-stream-message"
+          },
+          "logprobs": {
+            "$ref": "#/components/schemas/chat-completion-logprobs"
+          },
+          "finish_reason": {
+            "type": "string",
+            "description": "The reason the model stopped generating tokens."
+          }
+        }
+      },
+      "chat-completion-message": {
+        "title": "Chat Completion Message",
+        "type": "object",
+        "description": "An object containing the role and content for a chat completion message.",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "system",
+              "assistant",
+              "user"
+            ],
+            "description": "The role of the author of this message."
+          },
+          "content": {
+            "type": "string",
+            "description": "The contents of the message."
+          },
+          "tool_calls": {
+            "type": "array",
+            "description": "The tool calls generated by the model, such as function calls.",
+            "items": {
+              "$ref": "#/components/schemas/message-tool-calls"
+            }
+          }
+        }
+      },
+      "chat-completion-stream-message": {
+        "title": "Chat Completion Stream Message",
+        "type": "object",
+        "description": "An object containing the role and content for a chat completion stream message.",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "system",
+              "assistant",
+              "user"
+            ],
+            "description": "The role of the author of this message."
+          },
+          "content": {
+            "type": "string",
+            "description": "The contents of the message."
+          }
+        }
+      },
+      "chat-completion-logprobs": {
+        "title": "Chat Completion Logprobs",
+        "type": "object",
+        "description": "An object containing the log probability information for a chat completion choice.",
+        "properties": {
+          "content": {
+            "type": "array",
+            "description": "A list of message content tokens with log probability information.",
+            "items": {
+              "$ref": "#/components/schemas/chat-completion-logprobs-message-content-tokens"
+            }
+          }
+        }
+      },
+      "chat-completion-logprobs-message-content-tokens": {
+        "title": "Chat Completion Logprobs Message Content Tokens",
+        "type": "object",
+        "description": "An object containing message content tokens for a chat completion choice log probability information.",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The token."
+          },
+          "logprob": {
+            "type": "number",
+            "description": "The log probability of this token."
+          },
+          "bytes": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "A list of integers representing the UTF-8 bytes representation of the token. Useful in instances where characters are represented by multiple tokens and their byte representations must be combined to generate the correct text representation."
+          },
+          "top_logprobs": {
+            "type": "array",
+            "description": "List of the most likely tokens and their log probability, at this token position. In rare cases, there may be fewer than the number of requested top_logprobs returned.",
+            "items": {
+              "$ref": "#/components/schemas/chat-completion-logprobs-message-content-token"
+            }
+          }
+        }
+      },
+      "chat-completion-logprobs-message-content-token": {
+        "title": "Chat Completion Logprobs Message Content Token",
+        "type": "object",
+        "description": "An object containing a message content token for a chat completion choice log probability information.",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The token."
+          },
+          "logprob": {
+            "type": "number",
+            "description": "The log probability of this token."
+          },
+          "bytes": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "A list of integers representing the UTF-8 bytes representation of the token."
+          }
+        }
+      },
+      "chat-completion-usage": {
+        "title": "Chat Completion Usage",
+        "type": "object",
+        "description": "An object containing usage information for this request.",
+        "properties": {
+          "completion_tokens": {
+            "type": "integer",
+            "description": "Number of tokens in the generated completion."
+          },
+          "prompt_tokens": {
+            "type": "integer",
+            "description": "Number of tokens in the prompt."
+          },
+          "total_tokens": {
+            "type": "integer",
+            "description": "Total number of tokens used in the request (prompt + completion)."
+          }
+        }
+      },
+      "message-tool-calls": {
+        "title": "Chat Completion Message Tool Calls",
+        "type": "object",
+        "description": "An object containing the tool calls generated by the model for a chat completion choice.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The ID of the tool call."
+          },
+          "type": {
+            "type": "string",
+            "description": "The type of the tool. Currently, only `function` is supported."
+          },
+          "function": {
+            "$ref": "#/components/schemas/chat-completion-tool-call-function"
+          }
+        }
+      },
+      "chat-completion-tool-call-function": {
+        "title": "Chat Completion Tool Call Function",
+        "type": "object",
+        "description": "An object containing the the function that the model called for a chat completion choice.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of the function to call."
+          },
+          "arguments": {
+            "type": "string",
+            "description": "The arguments to call the function with, as generated by the model in JSON format. Note that the model does not always generate valid JSON, and may hallucinate parameters not defined by your function schema."
+          }
+        }
+      },
+      "function-tool": {
+        "title": "Chat Completion Function Tool",
+        "type": "object",
+        "description": "An object representing a function for use with chat completion tool calling.",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "function"
+            ],
+            "description": "The type of the tool. Currently, only `function` is supported."
+          },
+          "function": {
+            "$ref": "#/components/schemas/chat-completion-tool-function"
+          }
+        }
+      },
+      "chat-completion-tool-function": {
+        "title": "Chat Completion Tool Function",
+        "type": "object",
+        "description": "An object representing a function for use with chat completion tool calling.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of the function to be called. Must be a-z, A-Z, 0-9, or contain underscores and dashes, with a maximum length of 64."
+          },
+          "description": {
+            "type": "string",
+            "description": "A description of what the function does, used by the model to choose when and how to call the function."
+          },
+          "parameters": {
+            "type": "object",
+            "description": "The parameters the function accepts, described as a JSON Schema object."
+          }
+        }
+      },
+      "function-tool-choice": {
+        "title": "Chat Completion Function Tool Choice",
+        "type": "object",
+        "description": "An object representing a function tool choice.",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "function"
+            ],
+            "description": "The type of the tool. Currently, only `function` is supported."
+          },
+          "function": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The name of the function to call."
+              }
+            },
+            "required": [
+              "name"
+            ]
+          }
+        }
+      },
+      "error-response": {
+        "title": "Error Response",
+        "type": "object",
+        "description": "An error response from the API",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "message": {
+            "type": "string",
+            "description": "Additional error details"
+          }
+        }
+      }
+    }
+  }
+}
+
